@@ -1,100 +1,56 @@
 {% extends "layout.html" %}
 {% block content %}
 
-  <p style="color:var(--muted);font-size:0.9em;margin-top:-20px;margin-bottom:36px;line-height:1.7;animation:fadeUp 0.5s 0.1s ease both;">
+  <p style="color:var(--muted);font-size:0.9em;margin-top:-20px;margin-bottom:40px;line-height:1.7;animation:fadeUp 0.5s 0.1s ease both;">
     Baagundhaaa? (బాగుందా?) means <em>"Is it good?"</em> in Telugu.<br>
     Built because food labels are confusing — and most people just don't read them.
   </p>
 
+  <!-- 6 core cards — 2 columns -->
   <div class="about-grid" style="animation:fadeUp 0.5s 0.2s ease both;">
-
     <div class="about-card">
       <div class="about-card-icon">🎯</div>
       <div class="about-card-title">Our Mission</div>
-      <div class="about-card-desc">Make food transparency accessible to every Indian consumer — one scan, instant clarity. No nutrition degree required.</div>
+      <div class="about-card-desc">One scan, instant clarity — no nutrition degree required. Making food transparency accessible to every Indian consumer.</div>
     </div>
-
     <div class="about-card">
       <div class="about-card-icon">🇮🇳</div>
       <div class="about-card-title">India First</div>
-      <div class="about-card-desc">Alternatives are searched for the Indian market. FSSAI regulations are checked. Products you can actually find at DMart, BigBasket or Amazon.in.</div>
+      <div class="about-card-desc">FSSAI regulations checked. Alternatives found on BigBasket, Amazon.in and DMart. Built specifically for the Indian market.</div>
     </div>
-
     <div class="about-card">
       <div class="about-card-icon">🔬</div>
-      <div class="about-card-title">Science-Backed Ratings</div>
-      <div class="about-card-desc">Ratings use the Australian HSR system with category-aware scoring — a snack, a drink, and a meal are each judged by the right standards.</div>
+      <div class="about-card-title">Science-Backed</div>
+      <div class="about-card-desc">Category-aware HSR scoring — a snack, a drink, and a meal are each judged by the right nutritional standards.</div>
     </div>
-
     <div class="about-card">
       <div class="about-card-icon">⚡</div>
-      <div class="about-card-title">Compare Products</div>
-      <div class="about-card-desc">Scan two products side by side and see a full nutrient comparison with a clear winner — perfect for deciding at the supermarket shelf.</div>
+      <div class="about-card-title">Compare & Decide</div>
+      <div class="about-card-desc">Scan two products side by side. See a full nutrient breakdown and a clear winner — perfect for supermarket decisions.</div>
     </div>
-
-    <div class="about-card">
-      <div class="about-card-icon">🥗</div>
-      <div class="about-card-title">Smart Alternatives</div>
-      <div class="about-card-desc">Always shows two options — a healthier variant from the same brand, and the best alternative from a different brand. You choose.</div>
-    </div>
-
-    <div class="about-card">
-      <div class="about-card-icon">🚫</div>
-      <div class="about-card-title">FSSAI Cross-Check</div>
-      <div class="about-card-desc">Ingredients are cross-referenced against FSSAI's list of banned and restricted additives — specific to Indian food regulations.</div>
-    </div>
-
-    <div class="about-card">
-      <div class="about-card-icon">💡</div>
-      <div class="about-card-title">Ingredient Popups</div>
-      <div class="about-card-desc">Tap any flagged ingredient to instantly learn what it is, why it's harmful, and which common products contain it.</div>
-    </div>
-
-    <div class="about-card">
-      <div class="about-card-icon">📤</div>
-      <div class="about-card-title">Share Results</div>
-      <div class="about-card-desc">Share your food label rating as a card on WhatsApp, Instagram, or any platform — spread awareness with one tap.</div>
-    </div>
-
-    <div class="about-card">
-      <div class="about-card-icon">📸</div>
-      <div class="about-card-title">Confidence Indicator</div>
-      <div class="about-card-desc">The AI tells you how clearly it could read the label — high, medium, or low — so you know when to trust the result or rescan.</div>
-    </div>
-
     <div class="about-card">
       <div class="about-card-icon">🛡️</div>
       <div class="about-card-title">Privacy First</div>
-      <div class="about-card-desc">Photos are analysed in memory and discarded immediately. No accounts, no tracking, no cookies, no ads. Ever.</div>
+      <div class="about-card-desc">Photos are analysed in memory and discarded immediately. No accounts, no tracking, no ads. Ever.</div>
     </div>
-
     <div class="about-card">
       <div class="about-card-icon">🔓</div>
       <div class="about-card-title">Open Source</div>
-      <div class="about-card-desc">Fully open source. No hidden agenda, no data harvesting. Built by and for the community. Contributions welcome.</div>
+      <div class="about-card-desc">Fully open source, no hidden agenda. Built by and for the community. Contributions welcome.</div>
     </div>
-
-    <div class="about-card">
-      <div class="about-card-icon">🤖</div>
-      <div class="about-card-title">Powered by Gemini 2.5</div>
-      <div class="about-card-desc">Uses Google Gemini 2.5 Flash — multimodal AI that reads and understands complex nutrition labels accurately and fast.</div>
-    </div>
-
   </div>
 
-  <div class="glass" style="text-align:left;margin-top:12px;animation:fadeUp 0.5s 0.35s ease both;">
+  <div class="glass" style="text-align:left;margin-top:16px;animation:fadeUp 0.5s 0.35s ease both;">
     <div class="detail-label">Why we built this</div>
     <div class="detail-value" style="line-height:1.8;">
       India has one of the world's fastest-growing packaged food markets — yet most consumers don't know what's really in their food.
       Labels are tiny, technical, and deliberately confusing. We wanted to change that with a single scan.
       <br><br>
-      Baagundhaaa? started as a personal project and became something we use every grocery run.
-      From HSR ratings to FSSAI checks to same-brand alternatives — every feature exists because a real user needed it.
-      We hope it helps you too.
+      Baagundhaaa? started as a personal project and became something we use every grocery run. We hope it helps you too.
     </div>
   </div>
 
-  <div class="btn-row" style="margin-top:36px;animation:fadeUp 0.5s 0.45s ease both;">
+  <div class="btn-row" style="margin-top:32px;animation:fadeUp 0.5s 0.45s ease both;">
     <button class="btn btn-primary" onclick="window.location.href='/app'">📷 Try It Now</button>
     <button class="btn btn-ghost" onclick="window.location.href='/how-it-works'">How It Works →</button>
   </div>
