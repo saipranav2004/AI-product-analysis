@@ -1,8 +1,10 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 import os
 import base64
 import json
 import re
+import uuid
+import tempfile
 from googlesearch import search
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -10,11 +12,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+app.secret_key = os.getenv('SECRET_KEY', os.urandom(24))
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-app.config['IMAGE_BYTES'] = None
-app.config['IMAGE_MIME'] = 'image/jpeg'
+# Temp dir for per-user image storage
+TEMP_DIR = tempfile.mkdtemp(prefix='baagundhaaa_')
 
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
@@ -147,7 +149,9 @@ OUTPUT — Reply ONLY in this exact JSON with no markdown, no extra text:
   "good_ingredients": ["<ingredient>"],
   "bad_ingredients": ["<ingredient>"],
   "fssai_flags": ["<FSSAI-restricted ingredient if found, else empty list>"],
-  "reason": "<2-3 sentences on key health concerns or positives, mention category context>",
+  "reason": "<2-3 sentences on key health concerns or positives, mention category context — in English>",
+  "reason_hi": "<same summary translated into simple Hindi (Devanagari script) — easy to understand for a common Indian consumer>",
+  "reason_te": "<same summary translated into simple Telugu (Telugu script) — easy to understand for a common Indian consumer>",
   "expiry": "<date or Not visible>"
 }
 """.strip()
@@ -185,6 +189,42 @@ Reply ONLY in this exact JSON format with no markdown, no extra text:
   "alt_brand_buy": "<where to buy in India>"
 }}
 """.strip()
+
+
+def _session_key():
+    """Return a unique key for this user session, creating one if needed."""
+    if 'uid' not in session:
+        session['uid'] = str(uuid.uuid4())
+    return session['uid']
+
+
+def save_user_image(image_data, mime_type, category=None):
+    """Save image bytes to a temp file scoped to this user session."""
+    uid = _session_key()
+    path = os.path.join(TEMP_DIR, uid + '.bin')
+    meta_path = os.path.join(TEMP_DIR, uid + '.json')
+    with open(path, 'wb') as f:
+        f.write(image_data)
+    with open(meta_path, 'w') as f:
+        json.dump({'mime': mime_type, 'category': category}, f)
+
+
+def load_user_image():
+    """Load image bytes for this user session. Returns (data, mime, category) or (None,None,None)."""
+    uid = session.get('uid')
+    if not uid:
+        return None, None, None
+    path = os.path.join(TEMP_DIR, uid + '.bin')
+    meta_path = os.path.join(TEMP_DIR, uid + '.json')
+    if not os.path.exists(path):
+        return None, None, None
+    with open(path, 'rb') as f:
+        data = f.read()
+    meta = {}
+    if os.path.exists(meta_path):
+        with open(meta_path, 'r') as f:
+            meta = json.load(f)
+    return data, meta.get('mime', 'image/jpeg'), meta.get('category')
 
 
 def clean_json_response(text):
@@ -264,10 +304,8 @@ def capture_image():
             return render_template('index.html', title="Scan Your Label", subtitle="#Label_Samjhega_India",
                                    error="No image received. Please try again.")
 
-        app.config['IMAGE_BYTES'] = image_data
-        app.config['IMAGE_MIME'] = mime_type
-        app.config['PRODUCT_CATEGORY'] = None  # reset
-        app.config['PRODUCT_NAME'] = None
+        # Save image scoped to this user's session (safe for concurrent users)
+        save_user_image(image_data, mime_type)
 
         picture = {'mime_type': mime_type, 'data': image_data}
         response = model.generate_content([HSR_ANALYSIS_PROMPT, picture])
@@ -278,8 +316,10 @@ def capture_image():
 
         result.setdefault('rating', 'N/A')
         result.setdefault('confidence', 'medium')
-        # Cache category for faster /process
-        app.config['PRODUCT_CATEGORY'] = result.get('category', 'other')
+        result.setdefault('reason_hi', '')
+        result.setdefault('reason_te', '')
+        # Cache category with image for faster /process
+        save_user_image(image_data, mime_type, category=result.get('category', 'other'))
         result.setdefault('reason', 'Unable to fully analyze this label.')
         result.setdefault('expiry', 'Not visible')
         result.setdefault('good_ingredients', [])
@@ -304,18 +344,19 @@ def capture_image():
 
 @app.route('/process', methods=['GET'])
 def process_data():
-    image_data = app.config.get('IMAGE_BYTES')
-    mime_type = app.config.get('IMAGE_MIME', 'image/jpeg')
+    image_data, mime_type, cached_category = load_user_image()
 
     if not image_data:
-        return jsonify({"Alternative": "No image found",
-                        "Reason": "Please go back and scan a product first.",
-                        "Where_to_Buy": ""})
+        return jsonify({"alt_brand_name": "No image found",
+                        "alt_brand_reason": "Please go back and scan a product first.",
+                        "alt_brand_buy": "",
+                        "same_brand_name": None,
+                        "same_brand_reason": "",
+                        "same_brand_buy": ""})
     try:
         picture = {'mime_type': mime_type, 'data': image_data}
 
         # Use cached category if available, else re-identify (saves one AI call)
-        cached_category = app.config.get('PRODUCT_CATEGORY')
         if cached_category and cached_category != 'other':
             product_name = cached_category.replace('_', ' ')
             # Still need brand — quick single-field call
