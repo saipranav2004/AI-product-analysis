@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }} — Baagundhaaa?</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+  <nav>
+    <a class="nav-brand" href="/">Baagundhaaa?</a>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/compare">⚡ Compare</a>
+      <a href="/how-it-works">How It Works</a>
+      <a href="/faq">FAQ</a>
+      <a href="/about">About</a>
+      <a href="/scan" class="nav-cta">📷 Scan Now</a>
+    </div>
+  </nav>
+
+  <div class="container {% block container_class %}{% endblock %}">
+    <h1>{{ title }}</h1>
+    {% if subtitle %}<h2>{{ subtitle }}</h2>{% endif %}
+    {% block content %}{% endblock %}
+  </div>
+
+</body>
+</html>

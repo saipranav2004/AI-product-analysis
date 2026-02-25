@@ -1,0 +1,77 @@
+{% extends "layout.html" %}
+{% block container_class %}wide{% endblock %}
+{% block content %}
+
+  <div style="animation:fadeUp 0.5s 0.1s ease both;margin-bottom:48px;">
+    <p class="section-sub">A step-by-step look at how Baagundhaaa? analyses your food</p>
+
+    <div class="steps-grid" style="margin-top:28px;">
+      <div class="step-card">
+        <span class="step-num">01</span>
+        <span class="step-icon">📷</span>
+        <div class="step-title">Capture the Label</div>
+        <div class="step-desc">Use your camera or upload a photo. Make sure the entire nutrition table and ingredients list are visible and in focus.</div>
+      </div>
+      <div class="step-card">
+        <span class="step-num">02</span>
+        <span class="step-icon">🔍</span>
+        <div class="step-title">AI Reads Every Value</div>
+        <div class="step-desc">Google Gemini AI reads the label — energy, fat, sugar, sodium, protein, fibre — and identifies all additives and ingredients.</div>
+      </div>
+      <div class="step-card">
+        <span class="step-num">03</span>
+        <span class="step-icon">🧮</span>
+        <div class="step-title">HSR Calculation</div>
+        <div class="step-desc">The AI applies a category-aware scoring system — a snack, a drink, and a meal are each judged by the right nutritional standards.</div>
+      </div>
+      <div class="step-card">
+        <span class="step-num">04</span>
+        <span class="step-icon">⭐</span>
+        <div class="step-title">Star Rating (1–5)</div>
+        <div class="step-desc">The raw score is normalized into a 0.5–5 star rating. ★5 is the healthiest. ★1 means high risk nutrients.</div>
+      </div>
+      <div class="step-card">
+        <span class="step-num">05</span>
+        <span class="step-icon">⚠️</span>
+        <div class="step-title">Ingredients Check</div>
+        <div class="step-desc">The AI flags harmful additives: artificial colours, preservatives (E-numbers), artificial sweeteners, HFCS, trans fats, and MSG.</div>
+      </div>
+      <div class="step-card">
+        <span class="step-num">06</span>
+        <span class="step-icon">🥗</span>
+        <div class="step-title">Healthier Alternative</div>
+        <div class="step-desc">A live web search finds the healthiest alternative brand available in India — with where to buy it.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="animation:fadeUp 0.6s 0.3s ease both;">
+    <p class="section-title">The HSR Scoring System</p>
+    <p class="section-sub">How points are calculated per 100g / 100ml</p>
+
+    <div class="hsr-strip" style="grid-template-columns:repeat(4,1fr);">
+      <div class="hsr-item"><div class="hsr-label">Energy (kJ)</div><div class="hsr-val hsr-bad">0–10 pts ↑bad</div></div>
+      <div class="hsr-item"><div class="hsr-label">Sat. Fat (g)</div><div class="hsr-val hsr-bad">0–10 pts ↑bad</div></div>
+      <div class="hsr-item"><div class="hsr-label">Sugars (g)</div><div class="hsr-val hsr-bad">0–10 pts ↑bad</div></div>
+      <div class="hsr-item"><div class="hsr-label">Sodium (mg)</div><div class="hsr-val hsr-bad">0–10 pts ↑bad</div></div>
+      <div class="hsr-item"><div class="hsr-label">Protein (g)</div><div class="hsr-val hsr-good">0–5 pts ↓bad</div></div>
+      <div class="hsr-item"><div class="hsr-label">Fibre (g)</div><div class="hsr-val hsr-good">0–5 pts ↓bad</div></div>
+      <div class="hsr-item"><div class="hsr-label">FVNL %</div><div class="hsr-val hsr-good">0–8 pts ↓bad</div></div>
+      <div class="hsr-item"><div class="hsr-label">Category</div><div class="hsr-val hsr-good">Adjusted</div></div>
+    </div>
+
+    <div class="glass" style="text-align:left;margin-top:20px;">
+      <div class="detail-label">How the rating is determined</div>
+      <div class="detail-value" style="line-height:1.8;">
+        The AI weighs nutrients that are harmful against nutrients that are beneficial —
+        accounting for the product's category. A snack is judged differently from a beverage or a staple food.
+        The final score is a fair, category-adjusted health rating from ★1 to ★5.
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row" style="margin-top:40px;">
+    <button class="btn btn-primary" onclick="window.location.href='/'">📷 Try It Now</button>
+  </div>
+
+{% endblock %}

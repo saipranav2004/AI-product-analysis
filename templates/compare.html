@@ -1,0 +1,577 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<style>
+  /* ── Upload slots ── */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    align-items: start;
+    margin-top: 8px;
+  }
+  .vs-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 60px;
+  }
+  .vs-circle {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.82em;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* ── Upload slot card ── */
+  .upload-slot {
+    background: var(--surface);
+    border: 1px dashed rgba(255,255,255,0.15);
+    border-radius: var(--radius);
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.25s, background 0.25s;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    position: relative;
+  }
+  .upload-slot:hover { border-color: rgba(201,168,76,0.45); background: rgba(201,168,76,0.04); }
+  .upload-slot.has-image { border-style: solid; border-color: rgba(201,168,76,0.3); }
+  .upload-slot.has-image:hover { border-color: rgba(201,168,76,0.6); }
+
+  .slot-icon { font-size: 2em; }
+  .slot-label { font-size: 0.82em; color: var(--muted); line-height: 1.5; }
+  .slot-label strong { display: block; color: var(--text); font-size: 1.05em; margin-bottom: 2px; }
+
+  .slot-preview {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 10px;
+    display: none;
+  }
+  .slot-preview.visible { display: block; }
+  .slot-change {
+    font-size: 0.72em;
+    color: var(--muted);
+    margin-top: 4px;
+    display: none;
+  }
+  .slot-change.visible { display: block; }
+
+  /* ── Analyse button ── */
+  #analyse-btn {
+    margin-top: 24px;
+    opacity: 0.35;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  #analyse-btn.ready { opacity: 1; pointer-events: all; }
+
+  /* ── Results section ── */
+  #compare-results { display: none; margin-top: 36px; animation: fadeUp 0.5s ease both; }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .result-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 18px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.4s;
+  }
+  .result-col::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    transition: background 0.4s;
+  }
+  .result-col.winner {
+    border-color: rgba(76,175,120,0.5);
+    box-shadow: 0 0 30px rgba(76,175,120,0.08);
+  }
+  .result-col.winner::before {
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+  }
+  .result-col.loser { opacity: 0.65; }
+
+  .winner-crown {
+    position: absolute;
+    top: 10px; right: 12px;
+    font-size: 1.2em;
+    display: none;
+  }
+  .result-col.winner .winner-crown { display: block; }
+
+  .col-preview {
+    width: 100%;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    border: 1px solid var(--border);
+  }
+
+  .col-category {
+    font-size: 0.65em;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .col-rating {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.4em;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .col-stars { font-size: 1.1em; letter-spacing: 2px; color: var(--gold); margin-bottom: 14px; }
+
+  .col-chips { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin: 10px 0; }
+  .col-reason {
+    font-size: 0.78em;
+    color: var(--muted);
+    line-height: 1.6;
+    text-align: left;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Nutrient comparison table ── */
+  .compare-table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.83em;
+  }
+  .compare-table th {
+    padding: 12px 14px;
+    text-align: center;
+    font-size: 0.72em;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+  .compare-table th:first-child { text-align: left; }
+  .compare-table td {
+    padding: 11px 14px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--text);
+  }
+  .compare-table td:first-child { text-align: left; color: var(--muted); font-size: 0.9em; }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .cell-better { color: var(--green); font-weight: 700; }
+  .cell-worse  { color: var(--red); }
+
+  /* ── Verdict banner ── */
+  .verdict-banner {
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .verdict-banner.winner-a {
+    background: rgba(76,175,120,0.07);
+    border: 1px solid rgba(76,175,120,0.25);
+  }
+  .verdict-banner.winner-b {
+    background: rgba(76,175,120,0.07);
+    border: 1px solid rgba(76,175,120,0.25);
+  }
+  .verdict-banner.tie {
+    background: rgba(201,168,76,0.07);
+    border: 1px solid rgba(201,168,76,0.25);
+  }
+  .verdict-banner::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+  }
+  .verdict-banner.tie::before {
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .verdict-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3em;
+    color: var(--green);
+    margin-bottom: 6px;
+  }
+  .verdict-banner.tie .verdict-title { color: var(--gold-lt); }
+  .verdict-sub { font-size: 0.85em; color: var(--muted); }
+
+  @media (max-width: 520px) {
+    .compare-grid { grid-template-columns: 1fr; }
+    .vs-divider { padding-top: 0; }
+    .vs-circle { width: 36px; height: 36px; }
+    .results-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<!-- Upload section -->
+<div class="compare-grid" id="upload-section">
+
+  <!-- Slot A -->
+  <div>
+    <p style="font-size:0.75em;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Product A</p>
+    <div class="upload-slot" id="slot-a" onclick="document.getElementById('input-a').click()">
+      <span class="slot-icon">📦</span>
+      <div class="slot-label"><strong>Tap to add Product A</strong>Upload or take a photo</div>
+      <img class="slot-preview" id="preview-a" src="" alt="">
+      <span class="slot-change" id="change-a">Tap to change</span>
+    </div>
+    <input type="file" id="input-a" accept="image/*" style="display:none" onchange="loadSlot('a', this)">
+  </div>
+
+  <div class="vs-divider"><div class="vs-circle">VS</div></div>
+
+  <!-- Slot B -->
+  <div>
+    <p style="font-size:0.75em;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Product B</p>
+    <div class="upload-slot" id="slot-b" onclick="document.getElementById('input-b').click()">
+      <span class="slot-icon">📦</span>
+      <div class="slot-label"><strong>Tap to add Product B</strong>Upload or take a photo</div>
+      <img class="slot-preview" id="preview-b" src="" alt="">
+      <span class="slot-change" id="change-b">Tap to change</span>
+    </div>
+    <input type="file" id="input-b" accept="image/*" style="display:none" onchange="loadSlot('b', this)">
+  </div>
+
+</div>
+
+<div style="text-align:center;">
+  <button class="btn btn-primary" id="analyse-btn" onclick="runCompare()" style="margin-top:24px;">
+    ⚡ Compare Now
+  </button>
+</div>
+
+<!-- Loading -->
+<div id="compare-loading" style="display:none;padding:40px 0;text-align:center;">
+  <div class="spinner-wrap">
+    <div class="spinner"></div>
+    <p class="loading-text" id="cmp-load-msg">Analysing Product A...</p>
+  </div>
+</div>
+
+<!-- Results -->
+<div id="compare-results">
+
+  <!-- Verdict -->
+  <div class="verdict-banner" id="verdict-banner">
+    <div class="verdict-title" id="verdict-title"></div>
+    <div class="verdict-sub" id="verdict-sub"></div>
+  </div>
+
+  <!-- Side-by-side cards -->
+  <div class="results-grid">
+    <div class="result-col" id="col-a">
+      <span class="winner-crown">🏆</span>
+      <img class="col-preview" id="col-preview-a" src="" alt="">
+      <span class="col-category" id="col-cat-a"></span>
+      <div class="col-rating" id="col-rating-a"></div>
+      <div class="col-stars" id="col-stars-a"></div>
+      <div class="col-chips" id="col-chips-a"></div>
+      <div class="col-reason" id="col-reason-a"></div>
+    </div>
+    <div class="result-col" id="col-b">
+      <span class="winner-crown">🏆</span>
+      <img class="col-preview" id="col-preview-b" src="" alt="">
+      <span class="col-category" id="col-cat-b"></span>
+      <div class="col-rating" id="col-rating-b"></div>
+      <div class="col-stars" id="col-stars-b"></div>
+      <div class="col-chips" id="col-chips-b"></div>
+      <div class="col-reason" id="col-reason-b"></div>
+    </div>
+  </div>
+
+  <!-- Nutrient table -->
+  <div class="compare-table-wrap">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Nutrient</th>
+          <th>Product A</th>
+          <th>Product B</th>
+        </tr>
+      </thead>
+      <tbody id="nutrient-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Actions -->
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="resetCompare()">↩ Compare Again</button>
+    <button class="btn btn-ghost" onclick="window.location.href='/app'">← Back to Scan</button>
+  </div>
+
+</div>
+
+<script>
+  const slotData = { a: null, b: null };
+
+  function loadSlot(id, input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      slotData[id] = e.target.result;
+      const preview = document.getElementById('preview-' + id);
+      const slot    = document.getElementById('slot-' + id);
+      const change  = document.getElementById('change-' + id);
+      preview.src = e.target.result;
+      preview.classList.add('visible');
+      slot.querySelector('.slot-icon').style.display = 'none';
+      slot.querySelector('.slot-label').style.display = 'none';
+      change.classList.add('visible');
+      slot.classList.add('has-image');
+      checkReady();
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+
+  function checkReady() {
+    const btn = document.getElementById('analyse-btn');
+    if (slotData.a && slotData.b) btn.classList.add('ready');
+    else btn.classList.remove('ready');
+  }
+
+  function buildStars(n) {
+    let s = '';
+    for (let i = 1; i <= 5; i++) {
+      if (n >= i) s += '★';
+      else if (n >= i - 0.5) s += '✦';
+      else s += '☆';
+    }
+    return s;
+  }
+
+  function ratingColor(n) {
+    if (n >= 4) return 'var(--green)';
+    if (n >= 3) return 'var(--gold)';
+    if (n >= 2) return 'var(--orange)';
+    return 'var(--red)';
+  }
+
+  function parseRating(raw) {
+    const m = String(raw).match(/[\d.]+/);
+    return m ? Math.min(5, Math.max(0, parseFloat(m[0]))) : 0;
+  }
+
+  async function runCompare() {
+    document.getElementById('upload-section').style.display = 'none';
+    document.getElementById('analyse-btn').style.display = 'none';
+    document.getElementById('compare-loading').style.display = 'block';
+    document.getElementById('compare-results').style.display = 'none';
+
+    // Cycle loading messages
+    const msgs = [
+      'Analysing Product A...',
+      'Analysing Product B...',
+      'Comparing nutritional profiles...',
+      'Calculating scores...',
+      'Almost done...'
+    ];
+    let mi = 0;
+    const mel = document.getElementById('cmp-load-msg');
+    const iv = setInterval(() => {
+      mi++;
+      if (mi < msgs.length) {
+        mel.style.opacity = 0;
+        setTimeout(() => { mel.textContent = msgs[mi]; mel.style.opacity = 1; }, 250);
+      }
+    }, 1800);
+
+    try {
+      const formData = new FormData();
+      // Convert base64 dataURLs to blobs
+      const blobA = await fetch(slotData.a).then(r => r.blob());
+      const blobB = await fetch(slotData.b).then(r => r.blob());
+      formData.append('product_a_file', blobA, 'product_a.jpg');
+      formData.append('product_b_file', blobB, 'product_b.jpg');
+
+      const resp = await fetch('/compare/analyse', { method: 'POST', body: formData });
+      const data = await resp.json();
+      clearInterval(iv);
+
+      if (data.error) throw new Error(data.error);
+
+      document.getElementById('compare-loading').style.display = 'none';
+      renderResults(data);
+
+    } catch(err) {
+      clearInterval(iv);
+      document.getElementById('compare-loading').style.display = 'none';
+      document.getElementById('upload-section').style.display = 'grid';
+      document.getElementById('analyse-btn').style.display = 'inline-flex';
+      alert('Analysis failed: ' + err.message);
+    }
+  }
+
+  function renderResults(data) {
+    const a = data.product_a;
+    const b = data.product_b;
+    const winner = data.winner;
+
+    const rA = parseRating(a.rating);
+    const rB = parseRating(b.rating);
+
+    // Verdict
+    const vBanner = document.getElementById('verdict-banner');
+    const vTitle  = document.getElementById('verdict-title');
+    const vSub    = document.getElementById('verdict-sub');
+
+    if (winner === 'tie') {
+      vBanner.className = 'verdict-banner tie';
+      vTitle.textContent = '🤝 It\'s a Tie!';
+      vSub.textContent   = 'Both products have the same health rating. Check the details below.';
+    } else {
+      const winLetter = winner === 'a' ? 'A' : 'B';
+      const winRating = winner === 'a' ? rA : rB;
+      vBanner.className = 'verdict-banner winner-' + winner;
+      vTitle.textContent = `🏆 Product ${winLetter} is Healthier`;
+      vSub.textContent   = `Rated ${winRating} out of 5 stars — ${Math.abs(rA - rB).toFixed(1)} star${Math.abs(rA-rB)!==1?'s':''} ahead.`;
+    }
+
+    // Fill each column
+    ['a','b'].forEach(id => {
+      const p = id === 'a' ? a : b;
+      const n = id === 'a' ? rA : rB;
+      const col = document.getElementById('col-' + id);
+
+      document.getElementById('col-preview-' + id).src = slotData[id];
+      document.getElementById('col-cat-' + id).textContent = (p.category || 'product').replace(/_/g,' ');
+      document.getElementById('col-rating-' + id).textContent = n.toFixed(1) + '★';
+      document.getElementById('col-rating-' + id).style.color = ratingColor(n);
+      document.getElementById('col-stars-' + id).textContent = buildStars(n);
+
+      // Bad ingredient chips
+      const chipsEl = document.getElementById('col-chips-' + id);
+      chipsEl.innerHTML = '';
+      if (p.bad_ingredients && p.bad_ingredients.length) {
+        p.bad_ingredients.slice(0,4).forEach(ing => {
+          const chip = document.createElement('span');
+          chip.className = 'chip chip-bad';
+          chip.textContent = '✗ ' + ing;
+          chipsEl.appendChild(chip);
+        });
+      } else {
+        chipsEl.innerHTML = '<span class="chip chip-good">✓ No harmful additives</span>';
+      }
+
+      document.getElementById('col-reason-' + id).textContent = p.reason || '';
+
+      // Winner / loser styling
+      if (winner === id) col.classList.add('winner');
+      else if (winner !== 'tie') col.classList.add('loser');
+    });
+
+    // Nutrient comparison table
+    const sb = {
+      a: a.score_breakdown || {},
+      b: b.score_breakdown || {}
+    };
+    const rows = [
+      { label: 'Energy',        ka: 'energy_pts',  kb: 'energy_pts',  lower_is_better: true  },
+      { label: 'Saturated Fat', ka: 'satfat_pts',  kb: 'satfat_pts',  lower_is_better: true  },
+      { label: 'Sugars',        ka: 'sugar_pts',   kb: 'sugar_pts',   lower_is_better: true  },
+      { label: 'Sodium',        ka: 'sodium_pts',  kb: 'sodium_pts',  lower_is_better: true  },
+      { label: 'Protein',       ka: 'protein_pts', kb: 'protein_pts', lower_is_better: false },
+      { label: 'Fibre',         ka: 'fibre_pts',   kb: 'fibre_pts',   lower_is_better: false },
+      { label: 'Health Rating', ka: '_rating_a',   kb: '_rating_b',   lower_is_better: false, special: true },
+    ];
+    sb.a._rating_a = rA;
+    sb.b._rating_b = rB;
+
+    const tbody = document.getElementById('nutrient-tbody');
+    tbody.innerHTML = '';
+    rows.forEach(row => {
+      let vA, vB;
+      if (row.special) {
+        vA = rA.toFixed(1) + ' ★';
+        vB = rB.toFixed(1) + ' ★';
+      } else {
+        vA = sb.a[row.ka] !== undefined ? sb.a[row.ka] + ' pts' : '—';
+        vB = sb.b[row.kb] !== undefined ? sb.b[row.kb] + ' pts' : '—';
+      }
+
+      const nA = parseFloat(sb.a[row.ka]) || 0;
+      const nB = parseFloat(sb.b[row.kb]) || 0;
+
+      let classA = '', classB = '';
+      if (nA !== nB) {
+        if (row.lower_is_better) {
+          classA = nA < nB ? 'cell-better' : 'cell-worse';
+          classB = nB < nA ? 'cell-better' : 'cell-worse';
+        } else {
+          classA = nA > nB ? 'cell-better' : 'cell-worse';
+          classB = nB > nA ? 'cell-better' : 'cell-worse';
+        }
+      }
+
+      tbody.innerHTML += `
+        <tr>
+          <td>${row.label}</td>
+          <td class="${classA}">${vA}</td>
+          <td class="${classB}">${vB}</td>
+        </tr>`;
+    });
+
+    document.getElementById('compare-results').style.display = 'block';
+  }
+
+  function resetCompare() {
+    slotData.a = null; slotData.b = null;
+    ['a','b'].forEach(id => {
+      document.getElementById('preview-' + id).src = '';
+      document.getElementById('preview-' + id).classList.remove('visible');
+      document.getElementById('change-' + id).classList.remove('visible');
+      document.getElementById('slot-' + id).classList.remove('has-image');
+      document.getElementById('slot-' + id).querySelector('.slot-icon').style.display = '';
+      document.getElementById('slot-' + id).querySelector('.slot-label').style.display = '';
+      document.getElementById('col-' + id).classList.remove('winner','loser');
+      document.getElementById('input-' + id).value = '';
+    });
+    document.getElementById('compare-results').style.display = 'none';
+    document.getElementById('upload-section').style.display = 'grid';
+    document.getElementById('analyse-btn').style.display = 'inline-flex';
+    document.getElementById('analyse-btn').classList.remove('ready');
+  }
+</script>
+
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+{% block content %}
+
+  <div id="camera-container">
+
+    <div class="video-wrap" id="video-wrap">
+      <video id="camera" autoplay playsinline></video>
+      <div class="scan-line" id="scan-line"></div>
+      <div class="scan-corner tl"></div>
+      <div class="scan-corner tr"></div>
+      <div class="scan-corner bl"></div>
+      <div class="scan-corner br"></div>
+    </div>
+
+    <div id="camera-error">
+      <p>📵 <strong>Camera access denied or unavailable.</strong></p>
+      <p style="margin-top:8px;">Please allow camera permissions in your browser settings, or go back and use Upload Image instead.</p>
+      <div class="btn-row" style="margin-top:16px;">
+        <button class="btn btn-ghost" onclick="window.location.href='/'">← Go Back</button>
+      </div>
+    </div>
+
+    <p class="camera-hint">Position the nutrition label clearly within the frame</p>
+
+    <button id="capture-button" class="btn btn-primary" onclick="capture()">📸 Capture</button>
+
+    <div id="capture-options">
+      <p style="color:var(--muted);font-size:0.85em;">Is the label clearly visible?</p>
+      <div class="btn-row">
+        <button class="btn btn-danger" onclick="retry()">Retry ❌</button>
+        <form action="/capture" method="POST" id="capture-form" style="margin:0;">
+          <input type="hidden" name="image_data" id="image-data">
+          <button type="submit" class="btn btn-secondary">Confirm ✅</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='camera.js') }}"></script>
+{% endblock %}

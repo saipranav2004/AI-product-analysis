@@ -1,0 +1,418 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<!-- ── Ingredient Info Popup ── -->
+<div id="ing-popup" style="display:none;">
+  <div id="ing-overlay" onclick="closePopup()"></div>
+  <div id="ing-modal">
+    <button class="ing-close" onclick="closePopup()">✕</button>
+    <div class="ing-modal-icon" id="ing-icon"></div>
+    <h3 id="ing-name" style="margin-bottom:8px;"></h3>
+    <span class="ing-type-badge" id="ing-type"></span>
+    <p id="ing-why" style="margin-top:14px;font-size:0.88em;color:var(--muted);line-height:1.7;"></p>
+    <p id="ing-found" style="margin-top:10px;font-size:0.8em;color:var(--muted);line-height:1.6;"></p>
+  </div>
+</div>
+
+<!-- ── Share Card (hidden, rendered for screenshot) ── -->
+<div id="share-card-wrap" style="position:fixed;left:-9999px;top:0;z-index:-1;">
+  <div id="share-card">
+    <div class="sc-header">
+      <span class="sc-brand">Baagundhaaa? 🌿</span>
+      <span class="sc-tagline">#Label_Samjhega_India</span>
+    </div>
+    <div class="sc-rating-row">
+      <span class="sc-stars" id="sc-stars"></span>
+      <span class="sc-num" id="sc-num"></span>
+    </div>
+    <div class="sc-category" id="sc-cat"></div>
+    <div class="sc-reason" id="sc-reason"></div>
+    <div class="sc-footer">baagundhaaa.app</div>
+  </div>
+</div>
+
+<!-- ── Loading ── -->
+<div id="loading">
+  <div class="spinner-wrap">
+    <div class="spinner"></div>
+    <p class="loading-text" id="load-msg">✨ Reading nutrition values...</p>
+  </div>
+</div>
+
+<!-- ── Results ── -->
+<div id="result" style="display:none;">
+
+  <!-- CARD 1: Rating -->
+  <div class="result-card" style="margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+      {% if response.category %}
+        <span class="category-badge">{{ response.category | replace('_',' ') | title }}</span>
+      {% endif %}
+      {% if response.confidence %}
+        <span class="confidence-badge confidence-{{ response.confidence }}">
+          {% if response.confidence == 'high' %}✓ Clear
+          {% elif response.confidence == 'medium' %}⚠ Partial
+          {% else %}⚠ Low quality
+          {% endif %}
+        </span>
+      {% endif %}
+    </div>
+
+    {% if response.confidence == 'low' %}
+    <div class="confidence-warning">
+      📸 Label wasn't clearly readable. Results may be inaccurate — try rescanning with better lighting.
+    </div>
+    {% endif %}
+
+    <div class="gauge-wrap">
+      <svg class="gauge-svg" width="160" height="90" viewBox="0 0 160 90">
+        <path d="M 20 80 A 60 60 0 0 1 140 80" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="10" stroke-linecap="round"/>
+        <path id="gauge-fill" d="M 20 80 A 60 60 0 0 1 140 80"
+          fill="none" stroke-width="10" stroke-linecap="round"
+          stroke-dasharray="188" stroke-dashoffset="188"
+          style="transition:stroke-dashoffset 1.3s cubic-bezier(0.4,0,0.2,1),stroke 0.5s ease;"/>
+        <text x="80" y="72" text-anchor="middle" class="gauge-label" id="gauge-num">—</text>
+        <text x="80" y="85" text-anchor="middle" class="gauge-sub">out of 5</text>
+      </svg>
+      <div class="stars-row" id="stars-el"></div>
+    </div>
+
+    <div class="detail-block" style="margin-top:16px;margin-bottom:0;">
+      <div class="detail-label">Summary</div>
+      <div class="detail-value" id="summary-text">{{ response.reason }}</div>
+    </div>
+  </div>
+
+  <!-- CARD 2: FSSAI alert (only if flagged) -->
+  {% if response.fssai_flags and response.fssai_flags | length > 0 %}
+  <div class="fssai-alert" style="margin-bottom:12px;">
+    <div class="fssai-alert-title">🇮🇳 FSSAI Restricted Ingredients</div>
+    <p class="fssai-alert-sub">Banned or restricted by India's food regulator:</p>
+    <div class="chips-wrap" style="margin-top:10px;">
+      {% for flag in response.fssai_flags %}
+        <span class="chip chip-fssai clickable-chip" onclick="showIngInfo('{{ flag }}','fssai')">🚫 {{ flag }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- CARD 3: Ingredients -->
+  <div class="result-card" style="margin-bottom:12px;">
+    <div class="detail-label" style="margin-bottom:12px;">⚠️ Harmful Ingredients <span style="font-size:0.8em;color:var(--muted);font-weight:400;letter-spacing:0;text-transform:none;">— tap to learn more</span></div>
+    <div class="chips-wrap">
+      {% if response.bad_ingredients %}
+        {% for ing in response.bad_ingredients %}
+          <span class="chip chip-bad clickable-chip" onclick="showIngInfo('{{ ing }}','bad')">✗ {{ ing }}</span>
+        {% endfor %}
+      {% else %}
+        <span class="chip chip-none">✓ None detected</span>
+      {% endif %}
+    </div>
+
+    {% if response.good_ingredients %}
+    <div class="detail-label" style="margin-top:18px;margin-bottom:10px;">✅ Positive Nutrients</div>
+    <div class="chips-wrap">
+      {% for ing in response.good_ingredients %}
+        <span class="chip chip-good clickable-chip" onclick="showIngInfo('{{ ing }}','good')">✓ {{ ing }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- CARD 4: Score breakdown + Expiry -->
+  <div class="result-card" style="margin-bottom:12px;">
+    {% if response.score_breakdown %}
+    <details>
+      <summary style="cursor:pointer;font-size:0.78em;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;user-select:none;list-style:none;">
+        Score Breakdown ▾
+      </summary>
+      <table class="score-table" style="margin-top:10px;">
+        <tr><td>Energy</td><td>{{ response.score_breakdown.get('energy_pts','—') }} pts</td></tr>
+        <tr><td>Saturated Fat</td><td>{{ response.score_breakdown.get('satfat_pts','—') }} pts</td></tr>
+        <tr><td>Sugar</td><td>{{ response.score_breakdown.get('sugar_pts','—') }} pts</td></tr>
+        <tr><td>Sodium</td><td>{{ response.score_breakdown.get('sodium_pts','—') }} pts</td></tr>
+        <tr><td>Protein (−)</td><td>{{ response.score_breakdown.get('protein_pts','—') }} pts</td></tr>
+        <tr><td>Fibre (−)</td><td>{{ response.score_breakdown.get('fibre_pts','—') }} pts</td></tr>
+        <tr><td>FVNL% (−)</td><td>{{ response.score_breakdown.get('fvnl_pts','—') }} pts</td></tr>
+      </table>
+    </details>
+    <hr class="divider">
+    {% endif %}
+    <div class="detail-label">Expiry / Best Before</div>
+    <div class="detail-value">{{ response.expiry }}</div>
+  </div>
+
+  <!-- Actions -->
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="window.location.href='/app'">← Try Another</button>
+    <button class="btn btn-ghost" onclick="shareResult()">📤 Share</button>
+    {% if show_alternative %}
+    <button class="btn btn-secondary" onclick="window.location.href='/alternative'">Find Better Option 🥗</button>
+    {% endif %}
+  </div>
+
+</div>
+
+<style>
+  /* ── Popup overlay ── */
+  #ing-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    animation: fadeIn 0.2s ease both;
+  }
+  #ing-modal {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: #141a14;
+    border: 1px solid var(--border);
+    border-radius: 24px 24px 0 0;
+    padding: 28px 24px 40px;
+    z-index: 201;
+    max-width: 560px;
+    margin: 0 auto;
+    text-align: left;
+    animation: slideUp 0.3s cubic-bezier(0.4,0,0.2,1) both;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+  .ing-close {
+    position: absolute; top: 16px; right: 20px;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted); border-radius: 50%;
+    width: 32px; height: 32px; cursor: pointer;
+    font-size: 0.85em; display: flex; align-items: center; justify-content: center;
+  }
+  .ing-modal-icon { font-size: 2.2em; margin-bottom: 10px; }
+  .ing-type-badge {
+    display: inline-block; font-size: 0.68em; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 20px; margin-top: 4px;
+  }
+  .ing-type-bad   { background: rgba(224,85,85,0.15); color: #f0a0a0; border: 1px solid rgba(224,85,85,0.3); }
+  .ing-type-good  { background: rgba(76,175,120,0.12); color: #90d8a8; border: 1px solid rgba(76,175,120,0.3); }
+  .ing-type-fssai { background: rgba(224,85,85,0.25); color: #ffaaaa; border: 1px solid rgba(224,85,85,0.5); }
+
+  .clickable-chip { cursor: pointer; transition: transform 0.15s, opacity 0.15s; }
+  .clickable-chip:hover { transform: translateY(-1px); opacity: 0.85; }
+  .clickable-chip:active { transform: scale(0.95); }
+
+  /* ── Share card styles (off-screen render) ── */
+  #share-card {
+    width: 420px;
+    background: linear-gradient(145deg, #0d1a0d, #111811);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 20px;
+    padding: 28px 28px 24px;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .sc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .sc-brand  { font-family: 'Playfair Display', serif; font-size: 1em; color: #c9a84c; font-weight: 700; }
+  .sc-tagline { font-size: 0.7em; color: #5a6a5a; letter-spacing: 1px; }
+  .sc-rating-row { display: flex; align-items: baseline; gap: 14px; margin-bottom: 8px; }
+  .sc-stars  { font-size: 1.6em; color: #c9a84c; letter-spacing: 3px; }
+  .sc-num    { font-family: 'Playfair Display', serif; font-size: 2.4em; font-weight: 700; color: #e8cc80; }
+  .sc-category { font-size: 0.7em; text-transform: uppercase; letter-spacing: 2px; color: #5a7a5a; margin-bottom: 14px; }
+  .sc-reason { font-size: 0.82em; color: #8a9a8a; line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px; }
+  .sc-footer { font-size: 0.68em; color: #3a4a3a; margin-top: 16px; text-align: right; letter-spacing: 1px; }
+</style>
+
+<script>
+  // ── Ingredient knowledge base ──
+  const ING_DB = {
+    'e102': { icon:'🟡', name:'Tartrazine (E102)', why:'Artificial yellow dye linked to hyperactivity in children and allergic reactions. Banned in Norway and Austria.', found:'Common in: yellow sweets, soft drinks, instant noodles, flavoured chips.' },
+    'tartrazine': { icon:'🟡', name:'Tartrazine (E102)', why:'Artificial yellow dye linked to hyperactivity in children and allergic reactions.', found:'Common in: yellow sweets, soft drinks, instant noodles.' },
+    'e110': { icon:'🟠', name:'Sunset Yellow (E110)', why:'Artificial orange dye. May cause hyperactivity, allergic reactions, and is restricted in several countries.', found:'Common in: orange drinks, sweets, snacks, ice cream.' },
+    'sunset yellow': { icon:'🟠', name:'Sunset Yellow (E110)', why:'Artificial orange dye linked to hyperactivity and allergic reactions in some people.', found:'Common in: coloured beverages, confectionery, snacks.' },
+    'e211': { icon:'🧪', name:'Sodium Benzoate (E211)', why:'Preservative that can combine with Vitamin C to form benzene, a known carcinogen. Linked to hyperactivity in children.', found:'Common in: soft drinks, pickles, sauces, fruit juices.' },
+    'sodium benzoate': { icon:'🧪', name:'Sodium Benzoate (E211)', why:'Can form benzene (a carcinogen) when combined with Vitamin C. Linked to hyperactivity.', found:'Common in: soft drinks, pickles, sauces.' },
+    'aspartame': { icon:'⚗️', name:'Aspartame (E951)', why:'Artificial sweetener. The WHO classified it as "possibly carcinogenic" in 2023. Controversial — some studies link it to headaches and mood effects.', found:'Common in: diet drinks, sugar-free gum, low-calorie snacks.' },
+    'e951': { icon:'⚗️', name:'Aspartame (E951)', why:'WHO classified as "possibly carcinogenic" in 2023. Linked to headaches in sensitive individuals.', found:'Common in: diet sodas, sugar-free products.' },
+    'acesulfame-k': { icon:'⚗️', name:'Acesulfame-K (E950)', why:'Artificial sweetener 200x sweeter than sugar. Some animal studies suggest it may affect metabolism. Long-term safety debated.', found:'Common in: diet drinks, protein bars, baked goods.' },
+    'saccharin': { icon:'⚗️', name:'Saccharin (E954)', why:'Oldest artificial sweetener. Once had a cancer warning label — later removed, but remains controversial.', found:'Common in: diet drinks, tabletop sweeteners.' },
+    'sucralose': { icon:'⚗️', name:'Sucralose (E955)', why:'May alter gut microbiome and insulin response. Recent studies suggest it could be genotoxic at high doses.', found:'Common in: protein powders, diet foods, baked goods.' },
+    'msg': { icon:'🧂', name:'MSG — Monosodium Glutamate (E621)', why:'Flavour enhancer. Generally recognised as safe by most regulators, but some people report headaches and nausea (Chinese Restaurant Syndrome — though evidence is weak).', found:'Common in: instant noodles, chips, Chinese sauces, processed meats.' },
+    'monosodium glutamate': { icon:'🧂', name:'Monosodium Glutamate', why:'Flavour enhancer considered safe by most regulators, though some people are sensitive to it.', found:'Common in: instant noodles, chips, savoury snacks.' },
+    'tbhq': { icon:'🔴', name:'TBHQ (E319)', why:'Petroleum-derived preservative. High doses caused tumours in animal studies. The EU limits its use. Banned in Japan.', found:'Common in: fast food oils, crackers, microwave popcorn, frozen fish.' },
+    'bha': { icon:'🔴', name:'BHA (E320)', why:'Antioxidant preservative. Listed as "reasonably anticipated to be a human carcinogen" by the US National Toxicology Program.', found:'Common in: butter, cereals, chewing gum, potato chips.' },
+    'bht': { icon:'🔴', name:'BHT (E321)', why:'Similar to BHA — some studies link it to tumour promotion, though evidence is mixed.', found:'Common in: breakfast cereals, chewing gum, frozen foods.' },
+    'hydrogenated': { icon:'🫙', name:'Hydrogenated / Trans Fat', why:'Artificially hardened vegetable oil containing trans fats. Raises bad (LDL) cholesterol, lowers good (HDL) cholesterol. Major cause of heart disease. Banned in many countries.', found:'Common in: vanaspati, margarine, biscuits, pastries, fried snacks.' },
+    'vanaspati': { icon:'🫙', name:'Vanaspati (Trans Fat)', why:'Partially hydrogenated vegetable oil widely used in India. Contains trans fats linked to heart disease. FSSAI has restricted trans fat content to below 2%.', found:'Common in: Indian sweets, fried snacks, bakery products.' },
+    'high-fructose corn syrup': { icon:'🍬', name:'High-Fructose Corn Syrup (HFCS)', why:'Cheap sweetener processed differently from regular sugar. Linked to obesity, fatty liver disease, and insulin resistance when consumed in excess.', found:'Common in: soft drinks, fruit-flavoured drinks, processed snacks.' },
+    'hfcs': { icon:'🍬', name:'High-Fructose Corn Syrup', why:'Linked to obesity and fatty liver when consumed regularly. Often hidden in "fruit drinks" and cheap sweets.', found:'Common in: soft drinks, packaged juices, confectionery.' },
+    'potassium bromate': { icon:'🚫', name:'Potassium Bromate (E924)', why:'BANNED in India by FSSAI. Used as a flour improver but classified as possibly carcinogenic. Banned in EU, UK, Canada, and China.', found:'Was found in: bread, pizza bases, flour mixes.' },
+    'rhodamine b': { icon:'🚫', name:'Rhodamine B', why:'BANNED in India. Synthetic dye used illegally to colour food bright pink/red. Toxic — can cause skin irritation, respiratory problems, and is carcinogenic.', found:'Illegally found in: street food, cotton candy, bright-coloured sweets.' },
+    'metanil yellow': { icon:'🚫', name:'Metanil Yellow (E105)', why:'BANNED in India. Illegal artificial dye used to make foods look yellow/golden. Toxic to the nervous system.', found:'Illegally found in: turmeric powder, besan, sweets, street food.' },
+    'carrageenan': { icon:'⚠️', name:'Carrageenan (E407)', why:'Seaweed-derived thickener. Some studies link it to gut inflammation and digestive issues, though food-grade carrageenan is still approved.', found:'Common in: dairy products, infant formula, processed meats, non-dairy milks.' },
+    'default_bad':  { icon:'⚠️', name:'Harmful Ingredient', why:'This ingredient has been flagged as potentially harmful based on nutritional research and food safety guidelines.', found:'Check the product label for more details.' },
+    'default_good': { icon:'✅', name:'Beneficial Nutrient', why:'This ingredient is beneficial for your health — it contributes positively to your nutritional intake.', found:'Look for more products that include this ingredient.' },
+    'default_fssai':{ icon:'🚫', name:'FSSAI Restricted Ingredient', why:'This ingredient is banned or restricted by FSSAI — India\'s food safety regulator. Its presence in food products is not permitted or is strictly limited.', found:'Report such products to FSSAI at fssai.gov.in.' },
+  };
+
+  function showIngInfo(name, type) {
+    const key = name.toLowerCase().trim();
+    let info = ING_DB[key];
+
+    // Try partial match
+    if (!info) {
+      for (const k of Object.keys(ING_DB)) {
+        if (key.includes(k) || k.includes(key)) { info = ING_DB[k]; break; }
+      }
+    }
+
+    // Fallback
+    if (!info) {
+      info = type === 'good' ? ING_DB['default_good']
+           : type === 'fssai' ? ING_DB['default_fssai']
+           : ING_DB['default_bad'];
+    }
+
+    document.getElementById('ing-icon').textContent = info.icon;
+    document.getElementById('ing-name').textContent = info.name || name;
+    document.getElementById('ing-why').textContent  = info.why;
+    document.getElementById('ing-found').textContent = info.found || '';
+
+    const badge = document.getElementById('ing-type');
+    badge.textContent  = type === 'good' ? 'Beneficial' : type === 'fssai' ? 'FSSAI Banned' : 'Harmful';
+    badge.className    = 'ing-type-badge ing-type-' + type;
+
+    document.getElementById('ing-popup').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closePopup() {
+    document.getElementById('ing-popup').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  // Close on ESC
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closePopup(); });
+
+  // ── Loading messages ──
+  const loadMsgs = [
+    '✨ Reading nutrition values...',
+    '🔢 Calculating health score...',
+    '🔍 Scanning ingredients...',
+    '🇮🇳 Checking FSSAI regulations...',
+    '⏳ Almost done...'
+  ];
+  let li = 0;
+  const lel = document.getElementById('load-msg');
+  const liv = setInterval(() => {
+    li++;
+    if (li < loadMsgs.length) {
+      lel.style.opacity = 0;
+      setTimeout(() => { lel.textContent = loadMsgs[li]; lel.style.opacity = 1; }, 250);
+    } else clearInterval(liv);
+  }, 1200);
+
+  setTimeout(() => {
+    clearInterval(liv);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('result').style.display  = 'block';
+    animateGauge();
+  }, 600);
+
+  function animateGauge() {
+    const raw = "{{ response.rating }}";
+    const m   = raw.match(/[\d.]+/);
+    const n   = m ? Math.min(5, Math.max(0, parseFloat(m[0]))) : 0;
+
+    let s = '';
+    for (let i = 1; i <= 5; i++) {
+      s += n >= i ? '★' : n >= i - 0.5 ? '✦' : '☆';
+    }
+    document.getElementById('stars-el').textContent  = s;
+    document.getElementById('gauge-num').textContent = n % 1 === 0 ? n.toFixed(0) : n.toFixed(1);
+
+    const fill  = document.getElementById('gauge-fill');
+    const color = n >= 4 ? '#4caf78' : n >= 3 ? '#c9a84c' : n >= 2 ? '#e09040' : '#e05555';
+    fill.style.stroke = color;
+    setTimeout(() => { fill.style.strokeDashoffset = 188 - (n / 5) * 188; }, 100);
+
+    // Populate share card
+    document.getElementById('sc-stars').textContent  = s;
+    document.getElementById('sc-num').textContent    = (n % 1 === 0 ? n.toFixed(0) : n.toFixed(1)) + ' / 5';
+    document.getElementById('sc-num').style.color    = color;
+    document.getElementById('sc-cat').textContent    = "{{ response.category | replace('_',' ') | title }}";
+    document.getElementById('sc-reason').textContent = "{{ response.reason | replace('\"','') }}";
+
+    if (n >= 4) launchConfetti();
+  }
+
+  // ── Share ──
+  async function shareResult() {
+    const card = document.getElementById('share-card');
+    card.style.display = 'block';
+
+    try {
+      // Use html2canvas if available, else fallback to Web Share / clipboard
+      if (typeof html2canvas !== 'undefined') {
+        const canvas = await html2canvas(card, { backgroundColor: null, scale: 2 });
+        card.style.display = 'none';
+        canvas.toBlob(async blob => {
+          const file = new File([blob], 'baagundhaaa-result.png', { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: 'My Food Label Result — Baagundhaaa?' });
+          } else {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'baagundhaaa-result.png'; a.click();
+            URL.revokeObjectURL(url);
+          }
+        });
+      } else {
+        // Fallback: share text via Web Share API
+        card.style.display = 'none';
+        const rating = document.getElementById('gauge-num').textContent;
+        const stars  = document.getElementById('stars-el').textContent;
+        const text   = `My food label scored ${rating}/5 ${stars}\n#Label_Samjhega_India\nbaagundhaaa.app`;
+        if (navigator.share) {
+          await navigator.share({ text, title: 'Food Label Rating — Baagundhaaa?' });
+        } else {
+          await navigator.clipboard.writeText(text);
+          showToast('Result copied to clipboard!');
+        }
+      }
+    } catch(e) {
+      card.style.display = 'none';
+      if (e.name !== 'AbortError') showToast('Could not share. Try copying the link.');
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1a2a1a;border:1px solid var(--border);color:var(--text);padding:12px 22px;border-radius:30px;font-size:0.85em;z-index:500;animation:fadeUp 0.3s ease both;';
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2800);
+  }
+
+  function launchConfetti() {
+    const colors = ['#c9a84c','#4caf78','#e8cc80','#90d8a8','#fff','#e09040'];
+    for (let i = 0; i < 55; i++) {
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      el.style.left = Math.random() * 100 + 'vw';
+      el.style.background = colors[Math.floor(Math.random() * colors.length)];
+      el.style.width  = (5 + Math.random() * 6) + 'px';
+      el.style.height = (5 + Math.random() * 6) + 'px';
+      el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      el.style.animationDuration = (2 + Math.random() * 2) + 's';
+      el.style.animationDelay   = (Math.random() * 0.8) + 's';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }
+  }
+</script>
+
+<!-- html2canvas for share image generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+{% endblock %}

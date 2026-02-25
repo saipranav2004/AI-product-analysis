@@ -1,0 +1,93 @@
+{% extends "layout.html" %}
+{% block content %}
+
+  <div class="faq-list">
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggle(this)">
+        Is Baagundhaaa? free to use?
+        <span class="arrow">▼</span>
+      </button>
+      <div class="faq-a">Yes — completely free. No account needed, no ads, no data sold. Just scan and get results.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggle(this)">
+        How accurate is the health rating?
+        <span class="arrow">▼</span>
+      </button>
+      <div class="faq-a">The rating follows the official Australian Health Star Rating (HSR) methodology — the same system used on packaged food in Australia and New Zealand. The AI reads every value on your label and applies the exact formula. Accuracy depends on the label being clearly readable in the photo.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggle(this)">
+        What is the Australian Health Star Rating (HSR)?
+        <span class="arrow">▼</span>
+      </button>
+      <div class="faq-a">HSR is a front-of-pack labelling system developed by the Australian and New Zealand governments. It rates packaged food from ½ star (least healthy) to 5 stars (most healthy), based on energy, saturated fat, sodium, sugar, protein, fibre, and fruit/vegetable/nut content per 100g or 100ml.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggle(this)">
+        Does my photo get stored anywhere?
+        <span class="arrow">▼</span>
+      </button>
+      <div class="faq-a">No. Your image is processed in memory and discarded after analysis. We do not store, log, or share any photos you upload or capture.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggle(this)">
+        What if the AI can't read my label?
+        <span class="arrow">▼</span>
+      </button>
+      <div class="faq-a">Make sure the nutrition table is fully visible, well-lit, and in focus. Avoid glare or reflections. Capture only the back panel of the product where the nutrition facts are printed. If it still fails, try uploading a clearer photo.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggle(this)">
+        Why are the alternatives India-specific?
+        <span class="arrow">▼</span>
+      </button>
+      <div class="faq-a">Baagundhaaa? was built for Indian consumers. The alternative suggestions are sourced from a live web search filtered for products available on Indian platforms like BigBasket, Amazon.in, and DMart.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggle(this)">
+        Which AI model powers this?
+        <span class="arrow">▼</span>
+      </button>
+      <div class="faq-a">We use Google Gemini 2.5 Flash — Google's latest multimodal AI model that can read both images and text. It's fast, accurate, and capable of understanding complex nutrition labels.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggle(this)">
+        Can I use this on my phone?
+        <span class="arrow">▼</span>
+      </button>
+      <div class="faq-a">Yes. The app is fully mobile-responsive. The Scan feature uses your phone's back camera for the best quality. You can also upload from your gallery.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggle(this)">
+        Is the source code available?
+        <span class="arrow">▼</span>
+      </button>
+      <div class="faq-a">Yes — Baagundhaaa? is fully open source. You can find the code, contribute, or self-host it. Built with Flask, Google Gemini API, and a lot of care for Indian consumers.</div>
+    </div>
+
+  </div>
+
+  <div class="btn-row" style="margin-top:36px;">
+    <button class="btn btn-primary" onclick="window.location.href='/'">📷 Start Scanning</button>
+  </div>
+
+  <script>
+    function toggle(btn) {
+      const item = btn.parentElement;
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+      if (!isOpen) item.classList.add('open');
+    }
+  </script>
+
+{% endblock %}

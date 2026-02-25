@@ -1,0 +1,67 @@
+{% extends "layout.html" %}
+{% block content %}
+
+  <!-- Upload overlay -->
+  <div id="upload-overlay" style="display:none;">
+    <div class="upload-overlay-inner">
+      <div class="upload-preview-wrap">
+        <img id="preview-img" src="" alt="preview">
+        <div class="preview-shimmer"></div>
+      </div>
+      <div class="spinner" style="border-top-color:var(--gold);margin:0 auto;"></div>
+      <p class="upload-status" id="upload-status">Reading image...</p>
+      <p style="font-size:0.78em;color:var(--muted);">Sending to AI for analysis</p>
+    </div>
+  </div>
+
+  <div class="button-container" id="main-buttons">
+    <button class="btn btn-primary" onclick="window.location.href='/scan'">📷 Scan Label</button>
+    <div class="or-divider">or</div>
+    <button class="btn btn-ghost" onclick="document.getElementById('file-upload').click()">📁 Upload Image</button>
+    <form action="/capture" method="POST" enctype="multipart/form-data" id="upload-form">
+      <input type="file" id="file-upload" name="file" class="upload-input" accept="image/*" onchange="handleUpload(this)">
+    </form>
+  </div>
+
+  {% if error %}<div class="error-msg">⚠️ {{ error }}</div>{% endif %}
+
+  <!-- What the AI checks strip -->
+  <div style="margin-top:52px;animation:fadeUp 0.6s 0.35s ease both;">
+    <p style="font-size:0.72em;color:var(--muted);text-transform:uppercase;letter-spacing:1.8px;margin-bottom:14px;">What the AI checks</p>
+    <div class="hsr-strip">
+      <div class="hsr-item"><div class="hsr-label">Energy</div><div class="hsr-val hsr-bad">↓ Less</div></div>
+      <div class="hsr-item"><div class="hsr-label">Sat. Fat</div><div class="hsr-val hsr-bad">↓ Less</div></div>
+      <div class="hsr-item"><div class="hsr-label">Sugar</div><div class="hsr-val hsr-bad">↓ Less</div></div>
+      <div class="hsr-item"><div class="hsr-label">Sodium</div><div class="hsr-val hsr-bad">↓ Less</div></div>
+      <div class="hsr-item"><div class="hsr-label">Protein</div><div class="hsr-val hsr-good">↑ More</div></div>
+      <div class="hsr-item"><div class="hsr-label">Fibre</div><div class="hsr-val hsr-good">↑ More</div></div>
+      <div class="hsr-item"><div class="hsr-label">Additives</div><div class="hsr-val hsr-bad">↓ Less</div></div>
+      <div class="hsr-item"><div class="hsr-label">FVNL%</div><div class="hsr-val hsr-good">↑ More</div></div>
+    </div>
+  </div>
+
+  <script>
+    function handleUpload(input) {
+      if (!input.files || !input.files[0]) return;
+      document.getElementById('main-buttons').style.display = 'none';
+      document.getElementById('upload-overlay').style.display = 'block';
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('preview-img').src = e.target.result;
+        const msgs = ['Reading image...','Compressing...','Uploading...','Sending to AI...','Almost ready...'];
+        let i = 0;
+        const el = document.getElementById('upload-status');
+        const iv = setInterval(() => {
+          i++;
+          if (i < msgs.length) {
+            el.style.opacity = 0;
+            setTimeout(() => { el.textContent = msgs[i]; el.style.opacity = 1; }, 200);
+          } else clearInterval(iv);
+        }, 900);
+        document.getElementById('upload-form').submit();
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  </script>
+
+{% endblock %}

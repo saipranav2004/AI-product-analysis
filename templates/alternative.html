@@ -1,0 +1,168 @@
+{% extends "layout.html" %}
+{% block content %}
+
+  <style>
+    /* ── Tabs ── */
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 4px;
+      margin-bottom: 24px;
+      animation: fadeUp 0.5s 0.1s ease both;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 11px 16px;
+      border: none;
+      border-radius: 46px;
+      background: none;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.85em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      white-space: nowrap;
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--gold-lt), var(--gold));
+      color: #1a1000;
+    }
+    .tab-btn:not(.active):hover { color: var(--text); }
+
+    .tab-pane { display: none; animation: fadeUp 0.35s ease both; }
+    .tab-pane.active { display: block; }
+  </style>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="spinner-wrap">
+      <div class="spinner" style="border-top-color:var(--green);"></div>
+      <p class="loading-text" id="loading-msg">Identifying your product...</p>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="result" style="display:none;">
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-same" onclick="switchTab('same')">
+        🔄 Same Brand
+      </button>
+      <button class="tab-btn" id="tab-alt" onclick="switchTab('alt')">
+        🆕 Different Brand
+      </button>
+    </div>
+
+    <!-- Same brand tab -->
+    <div class="tab-pane active" id="pane-same">
+      <div id="same-card"></div>
+    </div>
+
+    <!-- Different brand tab -->
+    <div class="tab-pane" id="pane-alt">
+      <div id="alt-card"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="window.location.href='/app'">Scan Another 📷</button>
+    </div>
+
+  </div>
+
+  <script>
+    function switchTab(tab) {
+      document.getElementById('tab-same').classList.toggle('active', tab === 'same');
+      document.getElementById('tab-alt').classList.toggle('active', tab === 'alt');
+      document.getElementById('pane-same').classList.toggle('active', tab === 'same');
+      document.getElementById('pane-alt').classList.toggle('active', tab === 'alt');
+    }
+
+    const messages = [
+      'Identifying your product...',
+      'Searching Indian markets...',
+      'Checking same-brand variants...',
+      'Finding best alternative brand...',
+      'Almost there...'
+    ];
+    let idx = 0;
+    const msgEl = document.getElementById('loading-msg');
+    const iv = setInterval(() => {
+      idx++;
+      if (idx < messages.length) {
+        msgEl.style.opacity = 0;
+        setTimeout(() => { msgEl.textContent = messages[idx]; msgEl.style.opacity = 1; }, 300);
+      }
+    }, 2000);
+
+    window.onload = function() {
+      fetch('/process')
+        .then(r => { if (!r.ok) throw new Error('Server error ' + r.status); return r.json(); })
+        .then(data => {
+          clearInterval(iv);
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('result').style.display = 'block';
+
+          // ── Same brand card ──
+          const sameCard = document.getElementById('same-card');
+          if (!data.same_brand_name || data.same_brand_name === 'null' || data.same_brand_name === null) {
+            sameCard.innerHTML = `
+              <div class="glass" style="text-align:left;">
+                <div class="detail-label" style="margin-bottom:10px;">Same Brand Variant</div>
+                <p style="color:var(--muted);font-size:0.88em;line-height:1.65;">
+                  ${data.same_brand_reason || 'No healthier variant found from this brand.'}
+                </p>
+                <p style="font-size:0.8em;color:var(--muted);margin-top:12px;">
+                  Try the <strong style="color:var(--text);">Different Brand</strong> tab for a healthier option. →
+                </p>
+              </div>`;
+            // Auto-switch to different brand tab if no same-brand exists
+            switchTab('alt');
+          } else {
+            sameCard.innerHTML = `
+              <div class="alt-card">
+                <div class="same-brand-badge">✦ Healthier option — same brand</div>
+                <div class="alt-name">${data.same_brand_name}</div>
+                <div class="detail-label" style="margin-bottom:8px;">Why it's healthier</div>
+                <div class="detail-value">${data.same_brand_reason}</div>
+                ${data.same_brand_buy ? `<div class="buy-badge">🛒 ${data.same_brand_buy}</div>` : ''}
+              </div>`;
+          }
+
+          // ── Different brand card ──
+          const altCard = document.getElementById('alt-card');
+          const isError = !data.alt_brand_name || ['Not found','Unavailable','Error'].includes(data.alt_brand_name);
+          if (isError) {
+            altCard.innerHTML = `
+              <div class="error-card">
+                <strong>⚠️ Could not find an alternative right now.</strong><br><br>
+                ${data.alt_brand_reason || 'Please try again.'}
+              </div>`;
+          } else {
+            altCard.innerHTML = `
+              <div class="alt-card">
+                <div class="alt-name">${data.alt_brand_name}</div>
+                <div class="detail-label" style="margin-bottom:8px;">Why it's healthier</div>
+                <div class="detail-value">${data.alt_brand_reason}</div>
+                ${data.alt_brand_buy ? `<div class="buy-badge">🛒 ${data.alt_brand_buy}</div>` : ''}
+              </div>`;
+          }
+        })
+        .catch(err => {
+          clearInterval(iv);
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('result').style.display = 'block';
+          document.getElementById('result').innerHTML = `
+            <div class="error-card">⚠️ ${err.message}</div>
+            <div class="btn-row">
+              <button class="btn btn-ghost" onclick="window.location.href='/app'">← Go Back</button>
+            </div>`;
+        });
+    };
+  </script>
+
+{% endblock %}
