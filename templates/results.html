@@ -224,6 +224,25 @@
 </style>
 
 <script>
+  // ── Language data ──
+  const SUMMARIES = {
+    en: {{ response.reason | tojson }},
+    hi: {{ (response.reason_hi or response.reason) | tojson }},
+    te: {{ (response.reason_te or response.reason) | tojson }}
+  };
+
+  function setLang(lang) {
+    document.getElementById('summary-text').textContent = SUMMARIES[lang] || SUMMARIES.en;
+    ['en','hi','te'].forEach(l => {
+      document.getElementById('lang-' + l).classList.toggle('active', l === lang);
+    });
+    // Change font for non-latin scripts
+    const el = document.getElementById('summary-text');
+    el.style.fontFamily = lang === 'en' ? '' : "'Noto Sans', 'Arial Unicode MS', sans-serif";
+    el.style.lineHeight  = lang === 'en' ? '' : '1.85';
+    el.style.fontSize    = lang === 'en' ? '' : '0.9em';
+  }
+
   // ── Ingredient knowledge base ──
   const ING_DB = {
     'e102': { icon:'🟡', name:'Tartrazine (E102)', why:'Artificial yellow dye linked to hyperactivity in children and allergic reactions. Banned in Norway and Austria.', found:'Common in: yellow sweets, soft drinks, instant noodles, flavoured chips.' },
