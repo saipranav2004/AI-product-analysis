@@ -14,6 +14,11 @@
   </div>
 </div>
 
+<!-- Hidden language data elements (avoids Jinja2/JS syntax conflict) -->
+<span id="data-en" style="display:none;">{{ response.reason }}</span>
+<span id="data-hi" style="display:none;">{{ response.reason_hi if response.reason_hi else response.reason }}</span>
+<span id="data-te" style="display:none;">{{ response.reason_te if response.reason_te else response.reason }}</span>
+
 <!-- ── Share Card (hidden, rendered for screenshot) ── -->
 <div id="share-card-wrap" style="position:fixed;left:-9999px;top:0;z-index:-1;">
   <div id="share-card">
@@ -78,7 +83,14 @@
     </div>
 
     <div class="detail-block" style="margin-top:16px;margin-bottom:0;">
-      <div class="detail-label">Summary</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div class="detail-label" style="margin-bottom:0;">Summary</div>
+        <div class="lang-toggle">
+          <button class="lang-btn active" onclick="setLang('en')" id="lang-en">EN</button>
+          <button class="lang-btn" onclick="setLang('hi')" id="lang-hi">हि</button>
+          <button class="lang-btn" onclick="setLang('te')" id="lang-te">తె</button>
+        </div>
+      </div>
       <div class="detail-value" id="summary-text">{{ response.reason }}</div>
     </div>
   </div>
